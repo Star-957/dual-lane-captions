@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "packageName": "dual-lane-captions",
+  "packageVersion": "0.1.0",
+  "publicationStatus": "public-source-release; npm publication disabled",
+  "scope": "Only the exact release allowlist; no repository history or local audit material.",
+  "selfExclusion": "This manifest is allowlisted but does not hash itself. The Git commit identifies the complete release.",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 19,
+      "sha256": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 92,
+      "sha256": "d4a01cf2735ec182ca6d512a7af882bdd6d03d6d57abf4ce5f9cfd01634c1f9f"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1065,
+      "sha256": "2ab90a60bde2c393658ce4a421c4f3d8c6dcee794dc529dde166cd523edda059"
+    },
+    {
+      "path": "LICENSE-STATUS.md",
+      "bytes": 1001,
+      "sha256": "6e34e26bbbed7605f18b058f621a41a91e476cb4a21d88526f8ce7f114b7b8f8"
+    },
+    {
+      "path": "README.md",
+      "bytes": 9030,
+      "sha256": "7022c6ea6fded038d1249299d8b6356dfe6759163890b4ecc235b98814ed1631"
+    },
+    {
+      "path": "demo/app.js",
+      "bytes": 4027,
+      "sha256": "411c9ef2da267e9174b4c0cef946d9862e6193478a1bbc9442765c331d7b7ed5"
+    },
+    {
+      "path": "demo/build-bundle.mjs",
+      "bytes": 1459,
+      "sha256": "8078ec245e595fe843af20f791225d90997cab35424108162f70a932c3967530"
+    },
+    {
+      "path": "demo/core.js",
+      "bytes": 11310,
+      "sha256": "27de0e1c7892312828594b27ee86f9d543af66dc17d94869356fe7411cac8205"
+    },
+    {
+      "path": "demo/index.html",
+      "bytes": 1980,
+      "sha256": "4fea689e4f6f26bf21841c9933f4e7771084b8fdf66f3c50c1021fa9f0238585"
+    },
+    {
+      "path": "demo/styles.css",
+      "bytes": 2220,
+      "sha256": "0a4f847f6c078e53ddf2c160efaad69368a774ea364e59d3ddf54d608fed59ec"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 274,
+      "sha256": "aae1f346bd1af452f467291f87887b4348c8a4c75421c34a9fda2e01483ef03c"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1082,
+      "sha256": "5466339a1da495b2c43b90ad889537fb85378f7e83cd841f42f082bc024185de"
+    },
+    {
+      "path": "scripts/verify-release.mjs",
+      "bytes": 4879,
+      "sha256": "8c838249ce9271171e18e644372af198b12764271875fd72fdd091e2dd1c9204"
+    },
+    {
+      "path": "src/caption-bridge.mjs",
+      "bytes": 32671,
+      "sha256": "e22599a27a765025d7a98db8251ce76249b06087e1b0842341eabe315aa4d526"
+    },
+    {
+      "path": "src/plain-record-snapshot.mjs",
+      "bytes": 734,
+      "sha256": "eb71a147e44691009418303f4023bb50ea2434aa76796653fc539310ed6a9c37"
+    },
+    {
+      "path": "src/subtitle-controller.mjs",
+      "bytes": 10201,
+      "sha256": "cfa7cd499158d9af9a15c229d9d2d8ab91e9ebf20973eca2ac01cfe76ae44e89"
+    },
+    {
+      "path": "src/timeline.mjs",
+      "bytes": 140,
+      "sha256": "2c0ecb00e83637a241594d676922570f0eec0fdf788636b3454a92ef5c65d0f0"
+    },
+    {
+      "path": "tests/demo.test.mjs",
+      "bytes": 4071,
+      "sha256": "79974e7b8565ce676714edd59b52f9e7f46d757b9eea448b5dd22a7e41a9968a"
+    },
+    {
+      "path": "tests/plain-record-snapshot.test.mjs",
+      "bytes": 1430,
+      "sha256": "8bf045f87ba48be77814073c9760b26db4082590932eb378ea5ba4ceb0889319"
+    },
+    {
+      "path": "tests/subtitle-controller.test.mjs",
+      "bytes": 73860,
+      "sha256": "85fc58a80f0643cce492a944398081238bd0a67dd4feda6e6e6271d33382eb01"
+    }
+  ]
+}

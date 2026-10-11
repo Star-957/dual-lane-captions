@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+dist/
+.npm/
+.env
+.env.*
+*.log
+*.tap
+*.zip
+*.tgz
+.DS_Store
+Thumbs.db

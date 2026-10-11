@@ -1,0 +1,38 @@
+{
+  "name": "dual-lane-captions",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Dependency-free speech and listening caption state, replay rejection, expiry and a local browser demo.",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build:demo": "node demo/build-bundle.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "verify:release": "node scripts/verify-release.mjs",
+    "refresh:manifest": "node scripts/verify-release.mjs --write"
+  },
+  "files": [
+    ".gitattributes",
+    ".gitignore",
+    "LICENSE",
+    "LICENSE-STATUS.md",
+    "README.md",
+    "RELEASE-MANIFEST.json",
+    "demo/app.js",
+    "demo/build-bundle.mjs",
+    "demo/core.js",
+    "demo/index.html",
+    "demo/styles.css",
+    "package-lock.json",
+    "package.json",
+    "scripts/verify-release.mjs",
+    "src/caption-bridge.mjs",
+    "src/plain-record-snapshot.mjs",
+    "src/subtitle-controller.mjs",
+    "src/timeline.mjs",
+    "tests/demo.test.mjs",
+    "tests/plain-record-snapshot.test.mjs",
+    "tests/subtitle-controller.test.mjs"
+  ]
+}

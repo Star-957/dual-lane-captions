@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>Dual-lane captions · local demo</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./core.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">LOCAL DEMO · SYNTHETIC TEXT</p>
+        <h1>Two voices.<br>Independent captions.</h1>
+        <p class="intro">Update, reject an old revision, and advance time. Each lane keeps its own state.</p>
+      </header>
+      <section class="stage" aria-label="Caption output" aria-live="polite" aria-atomic="true">
+        <article class="lane listening-lane">
+          <span id="listening-label" class="caption-label" hidden></span>
+          <p id="listening-text" hidden></p>
+        </article>
+        <article class="lane speech-lane">
+          <span id="speech-label" class="caption-label" hidden></span>
+          <p id="speech-text" hidden></p>
+        </article>
+      </section>
+      <nav aria-label="Caption controls">
+        <button id="show" type="button">Show sample</button>
+        <button id="update" type="button">Update partial</button>
+        <button id="stale" type="button">Try stale update</button>
+        <button id="expire" type="button">Advance 20 seconds</button>
+        <button id="reset" type="button">Reset</button>
+      </nav>
+      <section class="receipt" aria-label="Operation result">
+        <span id="clock">Clock: 0 ms</span>
+        <output id="status" role="status">Ready. Show a sample to begin.</output>
+      </section>
+      <footer>Manual clock · synthetic text · no external services</footer>
+    </main>
+  </body>
+</html>

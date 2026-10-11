@@ -1,0 +1,25 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color: #19363e; background: #f4f3ef; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 920px; margin: auto; padding: 56px 24px 28px; }
+.eyebrow { color: #426d72; font-size: .72rem; letter-spacing: .15em; font-weight: 700; }
+h1 { margin: 18px 0; font-size: clamp(2rem, 6vw, 3.8rem); font-weight: 650; line-height: 1.08; letter-spacing: -.04em; }
+.intro { max-width: 54ch; line-height: 1.6; color: #536b70; }
+.stage { min-height: 250px; display: flex; flex-direction: column; justify-content: center; gap: 22px; margin: 32px 0 24px; padding: 28px; border-radius: 20px; background: #fff; border: 1px solid #d8e1df; }
+.lane { min-height: 64px; padding-left: 18px; border-left: 3px solid #b9d2ce; }
+.speech-lane { border-color: #24796e; }
+.caption-label { font-size: .68rem; letter-spacing: .12em; color: #466c70; font-weight: 750; }
+.lane p { margin: 8px 0 0; overflow-wrap: anywhere; }
+#speech-text { font-size: clamp(1.2rem, 4vw, 1.75rem); line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; max-width: min(32ch, 88vw); }
+#listening-text { font-size: 1rem; line-height: 1.55; color: #486166; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; }
+[hidden] { display: none !important; }
+nav { display: flex; flex-wrap: wrap; gap: 9px; }
+button { border: 1px solid #b5cbc5; border-radius: 9px; padding: 11px 14px; background: #fff; color: #214c48; font: inherit; font-size: .86rem; cursor: pointer; }
+button:first-child { background: #246c60; border-color: #246c60; color: #fff; }
+button:hover { filter: brightness(.96); }
+button:focus-visible { outline: 3px solid #80600d; outline-offset: 3px; }
+.receipt { display: grid; gap: 9px; padding: 22px 0; min-height: 110px; font-size: .86rem; line-height: 1.5; }
+#clock { color: #587477; font-variant-numeric: tabular-nums; }
+#status { overflow-wrap: anywhere; }
+footer { border-top: 1px solid #d8e1df; padding-top: 17px; color: #536b70; font-size: .76rem; }
+@media (max-width: 480px) { main { padding: 28px 16px; } .stage { padding: 20px 16px; } button { flex-grow: 1; } }
