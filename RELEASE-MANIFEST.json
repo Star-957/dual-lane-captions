@@ -28,8 +28,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9030,
-      "sha256": "7022c6ea6fded038d1249299d8b6356dfe6759163890b4ecc235b98814ed1631"
+      "bytes": 11707,
+      "sha256": "fba0873b39baf843991f44e2459522b50a5fa853c6bd2398dcb93ffb15ff977e"
     },
     {
       "path": "demo/app.js",
@@ -73,8 +73,8 @@
     },
     {
       "path": "src/caption-bridge.mjs",
-      "bytes": 32671,
-      "sha256": "e22599a27a765025d7a98db8251ce76249b06087e1b0842341eabe315aa4d526"
+      "bytes": 34322,
+      "sha256": "97e592476f588ef8c3c471e7be32eb6bec9a9386661e85d85ee5062113428ae2"
     },
     {
       "path": "src/plain-record-snapshot.mjs",
@@ -103,8 +103,8 @@
     },
     {
       "path": "tests/subtitle-controller.test.mjs",
-      "bytes": 73860,
-      "sha256": "85fc58a80f0643cce492a944398081238bd0a67dd4feda6e6e6271d33382eb01"
+      "bytes": 82567,
+      "sha256": "021671bdc228ea2fcb4d1da2d81fd4c308c04df2fbcb74b192a41d4ee1ce3b02"
     }
   ]
 }

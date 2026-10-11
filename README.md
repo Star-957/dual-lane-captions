@@ -115,6 +115,44 @@ this method does not discover files, connect to another application, or determin
 who is allowed to speak. The legacy state shape without `recent` has a weaker,
 bounded replay window, not an authoritative event identity.
 
+For legacy snapshots, a distinct active sentence can follow an expired sentence
+even if the host missed the blank stop snapshot. The previous `until` must have
+passed on the epoch clock; a different unsequenced sentence cannot replace one
+that is still active. Repeating identical legacy text cannot identify a new
+occurrence reliably. Use authoritative `recent` entries when that distinction
+matters. Retired legacy signatures are bounded to the most recent 32.
+
+Repeating an unchanged event/lifetime does not advance its stop-acceptance
+watermark, including when its visible hold has expired and is repainted. A real
+lifetime extension advances that watermark and keeps superseded deadlines
+retired, so stale stops from before the extension remain rejected.
+
+Call and **await `dispose()` before replacing a bridge that owns a shared
+display**:
+
+```js
+await oldBridge.dispose();
+const replacement = new CaptionBridge({ render: paintCaptions });
+```
+
+Disposal immediately invalidates the expiry callback and rejects new or queued
+operations with `BRIDGE_DISPOSED`. A render already in progress may finish; the
+returned promise waits for it and its recovery work, without arming more timers.
+Repeated disposal returns the same promise. Disposal does not paint an empty
+frame, erase caption data, or transfer state. Cancellation is best effort; a
+leaked old callback cannot repaint after disposal. Calling `dispose()` from a
+renderer or scheduler callback is rejected to avoid waiting on itself. Trusted
+renderers must return a promise for all their display work; fire-and-forget work
+cannot be drained, and a renderer that never settles prevents handover.
+`frame()` remains available for inspecting the disposed instance's own state.
+
+`generation` is **instance-local**: each new bridge starts at 1. It rejects old
+generations within one instance, but an old generation-1 packet can be accepted
+by a fresh instance. Hosts carrying packets across reconnects or replacements
+must attach a separate session identity and reject mismatched sessions before
+calling `apply()`. Dispose the old instance before switching the display owner.
+Neither generation nor a session tag authenticates an untrusted sender.
+
 The bridge uses `node:async_hooks`, so it is not browser-importable. Renderer and
 scheduler callbacks are trusted application code. It is not a PII scrubber, a
 production integration, or a guarantee that arbitrary callbacks are safe.
@@ -125,9 +163,14 @@ Validated on 2026-10-11 using Windows x64, Node.js 24.18.1 and npm 11.16.0:
 
 - A fresh copy of the exact allowlist installed offline with an initially empty
   npm cache, empty user/global npm configuration and lifecycle scripts disabled.
-- All **79 tests passed**, with zero failures, skips or cancellations. These
+- All **87 tests passed**, with zero failures, skips or cancellations. These
   include five demo tests for the generated bundle, safe text rendering, button
   wiring, independent caption updates, revision rejection and expiry.
+- Eight added regression/boundary tests cover missed legacy stops, delayed
+  stops after unchanged polls/redraws, real lifetime extensions, disposal with
+  failed cancellation, active/queued rendering, reentrant disposal, and the
+  host's session boundary. Seven failed against the initial bridge before the
+  fixes; the explicit instance-local generation boundary already passed.
 - Rebuilding `demo/core.js` reproduced the included bytes. The staged source
   files also matched their reviewed hashes after installation, build and tests.
 - Release-only pattern screening found no private project identifiers,
@@ -135,7 +178,7 @@ Validated on 2026-10-11 using Windows x64, Node.js 24.18.1 and npm 11.16.0:
   fixture inspection found only generic examples and Node.js
   built-in / relative imports. Pattern screening is not proof of anonymity.
 
-The demo was also exercised in a real Chrome browser on Windows over loopback
+For the initial release, the unchanged demo was exercised in a real Chrome browser on Windows over loopback
 HTTP, at 1280 x 900, 390 x 844 and 320 x 800 viewports. The five actions worked
 with both pointer and keyboard input; Tab followed the displayed control order.
 Captions and controls remained readable without horizontal overflow. The page
@@ -148,6 +191,7 @@ The five automated demo tests use Node's VM and fake DOM elements. The separate
 browser checks cover the stated interactions and viewport sizes; they are not a
 full accessibility certification. Screen-reader audio, Firefox, Safari and
 direct-file browser behavior were not part of that browser run.
+No new browser run is claimed for the Node-only bridge repair.
 
 Existing private-project totals are not counted as release test evidence.
 No source repository history, local hooks, credentials, conversations, character

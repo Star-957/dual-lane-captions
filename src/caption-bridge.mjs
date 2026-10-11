@@ -193,6 +193,8 @@ export class CaptionBridge {
   #expirySerial = 0;
   #tail = Promise.resolve();
   #pendingOperations = 0;
+  #disposed = false;
+  #disposePromise = null;
   #speech = createSpeechCaptionAuthority();
   #generation = 1;
   #speakingFlagSignature = null;
@@ -235,6 +237,19 @@ export class CaptionBridge {
 
   get generation() {
     return this.#generation;
+  }
+
+  dispose() {
+    if (this.#renderContext.getStore() === this) {
+      return Promise.resolve({ ok: false, note: "reentrant caption disposal rejected" });
+    }
+    if (this.#disposePromise) return this.#disposePromise;
+    this.#disposed = true;
+    const handle = this.#expiryHandle;
+    this.#invalidateExpiryToken(this.#expiryToken);
+    this.#disposePromise = this.#tail.then(() => ({ ok: true, note: "caption bridge disposed" }));
+    this.#cancelHandle(handle);
+    return this.#disposePromise;
   }
 
   #readRawNow() {
@@ -284,6 +299,8 @@ export class CaptionBridge {
   }
 
   #enqueue(operation, { internal = false } = {}) {
+    const disposedReceipt = () => ({ ok: false, note: "BRIDGE_DISPOSED: caption bridge is disposed" });
+    if (this.#disposed) return Promise.resolve(disposedReceipt());
     if (!internal && this.#pendingOperations >= MAX_PENDING_CAPTION_OPERATIONS) {
       return Promise.resolve({
         ok: false,
@@ -291,7 +308,8 @@ export class CaptionBridge {
       });
     }
     this.#pendingOperations += 1;
-    const queued = this.#tail.then(operation, operation);
+    const run = () => this.#disposed ? disposedReceipt() : operation();
+    const queued = this.#tail.then(run, run);
     this.#tail = queued.then(() => undefined, () => undefined);
     return queued.then(
       (value) => {
@@ -340,6 +358,9 @@ export class CaptionBridge {
   }
 
   #replaceExpiry(state, referenceNowMs, currentNowMs = referenceNowMs) {
+    // An operation already rendering may finish during disposal, but cannot arm
+    // more work. The host awaits dispose() before handing over its renderer.
+    if (this.#disposed) return { expiresAtMs: null, scheduledAtMs: currentNowMs };
     const expiresAtMs = nextSubtitleExpiry(state, referenceNowMs);
     const previousHandle = this.#expiryHandle;
     const token = this.#expirySerial + 1;
@@ -511,7 +532,9 @@ export class CaptionBridge {
     }
     this.#speakingEvent = Object.freeze({
       ...event,
-      observedAtEpoch: epochNow,
+      observedAtEpoch: sameAcceptedEvent && event.until === previousEvent.until
+        ? previousEvent.observedAtEpoch
+        : epochNow,
       signature,
       supersededUntils: Object.freeze(supersededUntils),
       lifetimeHistorySealed,
@@ -781,9 +804,19 @@ export class CaptionBridge {
       return { ok: false, note: error.message };
     }
 
-    const currentEvent = this.#speakingEvent;
     const hasText = Boolean(flag.text.trim());
     let nextEvent = hasText ? matchingSpeechEvent(flag) : null;
+    // A missed blank snapshot must not trap all later legacy sentences. Retire
+    // the expired event only after its distinct successor commits successfully.
+    const expiredLegacy = nextEvent === null
+      && hasText
+      && this.#speakingEvent?.synthetic
+      && this.#speakingEvent.text !== flag.text
+      && this.#speakingEvent.until <= epochNow
+      && flag.until > epochNow
+      ? this.#speakingEvent
+      : null;
+    const currentEvent = expiredLegacy ? null : this.#speakingEvent;
     if (nextEvent) {
       if (nextEvent.start > epochNow) {
         return { ok: false, note: "future speaking flag ignored" };
@@ -965,6 +998,7 @@ export class CaptionBridge {
       holdMs,
     }, timing, true);
     if (!result.ok) return result;
+    if (expiredLegacy) this.#retireSpeechEvent(expiredLegacy);
     this.#speakingTurn = nextTurn;
     this.#speakingRevision = nextRevision;
     this.#commitSpeechEvent(nextEvent, epochNow, signature, currentEvent);

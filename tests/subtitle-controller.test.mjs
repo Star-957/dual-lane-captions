@@ -24,6 +24,180 @@ function applyBridge(bridge, command) {
   return bridge.apply({ ...command, generation: bridge.generation });
 }
 
+test("repair regression: missed legacy stops do not block later distinct sentences", async () => {
+  for (const fireExpiry of [false, true]) {
+    let now = 0;
+    let epoch = 1_000;
+    const callbacks = [];
+    const bridge = new CaptionBridge({
+      now: () => now,
+      epochNow: () => epoch,
+      schedule: (callback) => { callbacks.push(callback); return {}; },
+      cancel: () => undefined,
+    });
+    const old = { text: "synthetic old sentence", until: 1_100 };
+    assert.equal((await bridge.applySpeakingFlag(old)).ok, true);
+    assert.equal((await bridge.applySpeakingFlag({ text: "overlapping sentence", until: 4_000 })).ok, false);
+    now = 2_000;
+    epoch = 3_000;
+    if (fireExpiry) await callbacks[0]();
+    assert.equal(bridge.frame().speech, null);
+    assert.equal((await bridge.applySpeakingFlag({ text: "synthetic new sentence", until: 4_000 })).ok, true);
+    assert.equal(bridge.frame().speech.text, "synthetic new sentence");
+    assert.equal((await bridge.applySpeakingFlag(old)).ok, false);
+    assert.equal(bridge.frame().speech.text, "synthetic new sentence");
+    now = 4_000;
+    epoch = 5_000;
+    assert.equal((await bridge.applySpeakingFlag({ text: "synthetic third sentence", until: 6_000 })).ok, true);
+    assert.equal(bridge.frame().speech.text, "synthetic third sentence");
+  }
+});
+
+test("repair regression: unchanged polls preserve delayed stop acceptance", async () => {
+  for (const authoritative of [false, true]) {
+    for (const repeat of [false, true]) {
+      let now = 0;
+      let epoch = 1_000;
+      const bridge = new CaptionBridge({ now: () => now, epochNow: () => epoch, schedule: () => ({}), cancel: () => undefined });
+      const text = "synthetic interrupted speech";
+      const active = { text, until: 6_000, ...(authoritative ? { recent: [{ text, start: 1_000, until: 6_000 }] } : {}) };
+      assert.equal((await bridge.applySpeakingFlag(active)).ok, true);
+      now = 1_000;
+      epoch = 2_000;
+      if (repeat) assert.equal((await bridge.applySpeakingFlag(active)).note, "speaking flag unchanged");
+      now = 1_100;
+      epoch = 2_100;
+      const stop = { text: "", until: 1_500, ...(authoritative ? { recent: [{ text, start: 1_000, until: 1_500 }] } : {}) };
+      assert.equal((await bridge.applySpeakingFlag(stop)).ok, true);
+      assert.equal(bridge.frame().speech, null);
+      assert.equal((await bridge.applySpeakingFlag(active)).ok, false);
+    }
+  }
+});
+
+test("repair regression: an unchanged redraw preserves the speech lifetime watermark", async () => {
+  let now = 0;
+  let epoch = 1_000;
+  const bridge = new CaptionBridge({ now: () => now, epochNow: () => epoch, schedule: () => ({}), cancel: () => undefined });
+  const text = "synthetic long speech";
+  const active = { text, until: 30_000, recent: [{ text, start: 1_000, until: 30_000 }] };
+  assert.equal((await bridge.applySpeakingFlag(active)).ok, true);
+  now = 20_000;
+  epoch = 21_000;
+  assert.equal(bridge.frame().speech, null);
+  assert.equal((await bridge.applySpeakingFlag(active)).ok, true);
+  assert.equal((await bridge.applySpeakingFlag({ text: "", until: 15_000, recent: [{ text, start: 1_000, until: 15_000 }] })).ok, true);
+  assert.equal(bridge.frame().speech, null);
+});
+
+test("repair regression: a real extension still rejects a stop before the extension", async () => {
+  let epoch = 1_000;
+  const bridge = new CaptionBridge({ now: () => 0, epochNow: () => epoch, schedule: () => ({}), cancel: () => undefined });
+  const text = "synthetic extended speech";
+  const flag = (until) => ({ text, until, recent: [{ text, start: 1_000, until }] });
+  assert.equal((await bridge.applySpeakingFlag(flag(3_000))).ok, true);
+  epoch = 2_000;
+  assert.equal((await bridge.applySpeakingFlag(flag(6_000))).ok, true);
+  epoch = 2_100;
+  assert.equal((await bridge.applySpeakingFlag(flag(6_000))).ok, true);
+  const stop = (until) => ({ text: "", until, recent: [{ text, start: 1_000, until }] });
+  assert.equal((await bridge.applySpeakingFlag(stop(1_500))).ok, false);
+  epoch = 3_500;
+  assert.equal((await bridge.applySpeakingFlag(stop(3_000))).ok, false);
+  assert.equal((await bridge.applySpeakingFlag(stop(2_050))).ok, true);
+});
+
+test("repair regression: disposal invalidates a leaked expiry before a display handover", async () => {
+  let now = 0;
+  let visible = null;
+  const callbacks = [];
+  const options = {
+    now: () => now,
+    render: (frame) => { visible = frame.listening?.text ?? null; },
+    schedule: (callback) => { callbacks.push(callback); return {}; },
+    cancel: () => { throw new Error("synthetic cancellation failure"); },
+  };
+  const oldBridge = new CaptionBridge(options);
+  const command = (turnId, holdMs) => ({ type: "setCaption", turnId, revision: 1, text: turnId, final: true, holdMs });
+  assert.equal((await applyBridge(oldBridge, command("synthetic old", 100))).ok, true);
+  const oldExpiry = callbacks[0];
+  assert.equal((await oldBridge.dispose()).ok, true);
+  assert.equal(visible, "synthetic old", "disposal does not paint or clear the shared display");
+  const replacement = new CaptionBridge(options);
+  assert.equal((await applyBridge(replacement, command("synthetic replacement", 1_000))).ok, true);
+  now = 100;
+  await oldExpiry();
+  assert.equal(visible, "synthetic replacement");
+  assert.equal(replacement.frame().listening.text, visible);
+  assert.match((await applyBridge(oldBridge, command("closed", 100))).note, /BRIDGE_DISPOSED/u);
+  assert.match((await oldBridge.applySpeakingFlag({ text: "closed speech", until: 1_000 })).note, /BRIDGE_DISPOSED/u);
+  await replacement.dispose();
+});
+
+test("repair regression: disposal drains active rendering and rejects queued work without new timers", async () => {
+  let releaseRender;
+  let markStarted;
+  let timers = 0;
+  const started = new Promise((resolve) => { markStarted = resolve; });
+  const gate = new Promise((resolve) => { releaseRender = resolve; });
+  const painted = [];
+  const bridge = new CaptionBridge({
+    now: () => 0,
+    render: async (frame) => { painted.push(frame.listening?.text); markStarted(); await gate; },
+    schedule: () => { timers += 1; return {}; },
+    cancel: () => undefined,
+  });
+  const command = (turnId) => ({ type: "setCaption", turnId, revision: 1, text: turnId, final: false });
+  const active = applyBridge(bridge, command("active"));
+  await started;
+  const queued = applyBridge(bridge, command("queued"));
+  const disposal = bridge.dispose();
+  assert.equal(bridge.dispose(), disposal, "disposal is idempotent");
+  let disposed = false;
+  disposal.then(() => { disposed = true; });
+  await Promise.resolve();
+  assert.equal(disposed, false, "handover waits for the active renderer");
+  assert.match((await applyBridge(bridge, command("late"))).note, /BRIDGE_DISPOSED/u);
+  releaseRender();
+  assert.equal((await active).ok, true);
+  assert.match((await queued).note, /BRIDGE_DISPOSED/u);
+  assert.equal((await disposal).ok, true);
+  assert.deepEqual(painted, ["active"]);
+  assert.equal(timers, 0);
+});
+
+test("repair regression: reentrant disposal cannot deadlock a renderer", async () => {
+  let receipt;
+  let bridge;
+  bridge = new CaptionBridge({
+    now: () => 0,
+    render: async () => { receipt = await bridge.dispose(); },
+    schedule: () => ({}),
+    cancel: () => undefined,
+  });
+  assert.equal((await applyBridge(bridge, { type: "setCaption", turnId: "synthetic", revision: 1, text: "synthetic", final: false })).ok, true);
+  assert.equal(receipt.ok, false);
+  assert.match(receipt.note, /reentrant/u);
+  assert.equal((await bridge.dispose()).ok, true);
+});
+
+test("repair boundary: generation checks are instance-local and a host session guard rejects old sessions", async () => {
+  const options = { now: () => 0, schedule: () => ({}), cancel: () => undefined };
+  const first = new CaptionBridge(options);
+  const oldCommand = { generation: first.generation, type: "setCaption", turnId: "synthetic old session", revision: 1, text: "synthetic old session", final: false };
+  assert.equal((await first.apply(oldCommand)).ok, true);
+  const replacement = new CaptionBridge(options);
+  assert.equal(first.generation, replacement.generation);
+  assert.equal((await replacement.apply(oldCommand)).ok, true, "raw generation is not a session identity");
+  const guarded = new CaptionBridge(options);
+  const receive = (session, command) => session === "synthetic current session"
+    ? guarded.apply(command)
+    : Promise.resolve({ ok: false, note: "STALE_SESSION" });
+  assert.equal((await receive("synthetic old session", oldCommand)).ok, false);
+  assert.equal(guarded.frame().listening, null);
+  assert.equal((await receive("synthetic current session", oldCommand)).ok, true);
+});
+
 test("public setCaption remains a separate Listening listening lane", () => {
   const initial = createSubtitleState({ nowMs: 0 });
   const result = apply(initial, {
